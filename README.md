@@ -8,4 +8,5 @@
 
 
 ### Acknowledgements
-* The **DeepLearningMovies-master** folder contains the code for [Kaggle](https://www.kaggle.com/c/word2vec-nlp-tutorial/details/part-1-for-beginners-bag-of-words)'s tutorial
+* [Kaggle](https://www.kaggle.com/c/word2vec-nlp-tutorial/details/part-1-for-beginners-bag-of-words)'s tutorial
+on text classification gave us a solid start on this project.
