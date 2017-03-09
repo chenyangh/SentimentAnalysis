@@ -11,7 +11,7 @@ print('The total size of data set is', len(clean_data))
 
 vectorizer = CountVectorizer(analyzer="word", tokenizer=None,
                              preprocessor=None, stop_words=None,
-                             max_features=2000)
+                             max_features=8000)
 
 
 # Splitting training and testing data.
@@ -37,12 +37,12 @@ if IF_TRAIN:
     forest = RandomForestClassifier(n_estimators)
     forest = forest.fit(train_data_features, label_to_train)
     print("Finish training Random Forest")
-    f = open('model/trained_forest_2000_' + str(n_estimators), 'wb')
+    f = open('model/trained_forest_8000_' + str(n_estimators), 'wb')
     pickle.dump(forest, f)
     f.close()
     print('The total size of data set is', len(clean_data))
 else:
-    f = open('model/trained_forest500', 'rb')
+    f = open('model/trained_forest_2000_500', 'rb')
     forest = pickle.load(f)
     f.close()
 
