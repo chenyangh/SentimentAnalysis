@@ -5,6 +5,8 @@ from gensim.models import word2vec
 from sklearn.cluster import KMeans
 import time
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.naive_bayes import MultinomialNB
 
 file_name = 'data/clean_data_no_stopwords_punkt'
 f = open(file_name, 'rb')
@@ -27,8 +29,8 @@ def train_word2vec():
         level=logging.INFO)
 
     # Set values for various parameters
-    num_features = 300    # Word vector dimensionality
-    min_word_count = 40   # Minimum word count
+    num_features = 500    # Word vector dimensionality
+    min_word_count = 20   # Minimum word count
     num_workers = 9       # Number of threads to run in parallel
     context = 10          # Context window size
     downsampling = 1e-3   # Downsample setting for frequent words
@@ -45,7 +47,7 @@ def train_word2vec():
 
     # It can be helpful to create a meaningful model name and
     # save the model for later use. You can load it later using Word2Vec.load()
-    model_name = "feature/300features_40minwords_10context"
+    model_name = "feature/500features_20minwords_10context"
     model.save(model_name)
 
 
@@ -56,7 +58,7 @@ def having_fun_with_word2vec():
 
 def K_means_train():
     start = time.time()  # Start time
-    model_name = "feature/300features_40minwords_10context"
+    model_name = "feature/500features_20minwords_10context"
     model = word2vec.Word2Vec.load(model_name)
     # Set "k" (num_clusters) to be 1/5th of the vocabulary size, or an
     # average of 5 words per cluster
@@ -72,7 +74,7 @@ def K_means_train():
     elapsed = end - start
     print("Time taken for K Means clustering: ", elapsed, "seconds.")
 
-    __f = open('feature/vector-divby10-means', 'wb')
+    __f = open('feature/vector2-divby10-means', 'wb')
     pickle.dump(idx, __f)
     __f.close()
 
@@ -98,11 +100,11 @@ def create_bag_of_centroids(wordlist, word_centroid_map, num_clusters):
     return bag_of_centroids
 
 
-def random_forest_train():
-    __f = open('feature/vector-divby10-means', 'rb')
+def word2vec_classifier_train():
+    __f = open('feature/vector2-divby5-means', 'rb')
     idx = pickle.load(__f)
     __f.close()
-    model_name = "feature/300features_40minwords_10context"
+    model_name = "feature/500features_20minwords_10context"
     model = word2vec.Word2Vec.load(model_name)
     word_centroid_map = dict(zip(model.wv.index2word, idx))
 
@@ -120,7 +122,7 @@ def random_forest_train():
     __test_data = __clean_data[__num_data - __num_test:]
 
     word_vectors = model.wv.syn0
-    num_clusters = int(word_vectors.shape[0] / 10)
+    num_clusters = int(word_vectors.shape[0] / 5)
 
     train_centroids = np.zeros((len(__train_data), num_clusters),
                                dtype="float32")
@@ -141,18 +143,22 @@ def random_forest_train():
                                             word_centroid_map, num_clusters)
         counter += 1
 
-    forest = RandomForestClassifier(n_estimators=100)
-
-    # Fitting the forest may take a few minutes
-    print("Fitting a random forest to labeled training data...")
     train_label = np.asarray(__train_data[:, 1], dtype="|S6")
+    test_label = np.asarray(__test_data[:, 1], dtype="|S6")
+
+    train_naive_bayes(train_centroids, train_label, test_centroids, test_label)
+    # Fitting the forest may take a few minutes
+
+
+def train_random_forest(train_centroids, train_label, test_centroids, test_label):
+    forest = RandomForestClassifier(n_estimators=100)
+    print("Fitting a random forest to labeled training data...")
     forest = forest.fit(train_centroids, train_label)
-    __file_name = 'model/wordvector_randomforest'
+    __file_name = 'model/wordvector2_randomforest'
     __f = open(__file_name, 'wb')
     pickle.dump(forest, __f)
     __f.close()
 
-    test_label = np.asarray(__test_data[:, 1], dtype="|S6")
     result = forest.predict(test_centroids)
     count = 0
     for i in range(len(test_label)):
@@ -160,4 +166,39 @@ def random_forest_train():
             count += 1
     print(train_label, count / len(test_label))
 
-random_forest_train()
+
+def train_naive_bayes(train_counts, label_to_train, test_counts_tf, label_to_test):
+
+
+    # TF model
+    tf_transformer = TfidfTransformer(use_idf=False).fit(train_counts)
+    train_tf = tf_transformer.transform(train_counts)
+    clf_tf = MultinomialNB().fit(train_tf, label_to_train)
+    test_tf = tf_transformer.transform(test_counts_tf)
+    test_result_tf = clf_tf.predict(test_tf)
+
+    # Get accuracy
+    count = 0
+    for i in range(label_to_test.size):
+        if label_to_test[i] == test_result_tf[i]:
+            count += 1
+    print('TF Accuracy', count / len(label_to_test))
+
+    # TF IDF model
+    tfidf_transformer = TfidfTransformer()
+    train_tfidf = tfidf_transformer.fit_transform(train_counts)
+    clf_tfidf = MultinomialNB().fit(train_tfidf, label_to_train)
+
+    test_tfidf = tfidf_transformer.transform(test_counts_tf)
+    test_result_idf = clf_tfidf.predict(test_tfidf)
+
+    # Get accuracy
+    count = 0
+    for i in range(label_to_test.size):
+        if label_to_test[i] == test_result_idf[i]:
+            count += 1
+    print('TF-IDF Accuracy', count / len(label_to_test))
+
+
+word2vec_classifier_train()
+
