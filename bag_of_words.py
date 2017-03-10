@@ -13,11 +13,6 @@ f.close()
 print('The total size of data set is', len(clean_data))
 
 
-vectorizer = CountVectorizer(analyzer="word", tokenizer=None,
-                             preprocessor=None, stop_words=None,
-                             max_features=8000)
-
-
 # Splitting training and testing data.
 data_array = np.array(clean_data)
 data_size = data_array.shape[0]
@@ -33,6 +28,10 @@ label_to_test = np.asarray(data_test[:, 1], dtype="|S6")
 def train_random_forest():
     IF_TRAIN = True  #
     if IF_TRAIN:
+        bag_of_words_len = 5000
+        vectorizer = CountVectorizer(analyzer="word", tokenizer=None,
+                                     preprocessor=None, stop_words=None,
+                                     max_features=bag_of_words_len)
         # Prepare train data
         train_data_features = vectorizer.fit_transform(review_to_train)
         train_data_features = train_data_features.toarray()
@@ -42,7 +41,7 @@ def train_random_forest():
         forest = RandomForestClassifier(n_estimators)
         forest = forest.fit(train_data_features, label_to_train)
         print("Finish training Random Forest")
-        __f = open('model/trained_forest_8000_' + str(n_estimators), 'wb')
+        __f = open('model/trained_forest_'+str(bag_of_words_len)+'_'+str(n_estimators), 'wb')
         pickle.dump(forest, __f)
         __f.close()
         print('The total size of data set is', len(clean_data))
