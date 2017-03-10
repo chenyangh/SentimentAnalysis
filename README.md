@@ -9,7 +9,7 @@
 * Bag of Words
 
 #### Classifier
-* Random Frost
+* Random Forest
 
 ## Acknowledgements
 * [Kaggle](https://www.kaggle.com/c/word2vec-nlp-tutorial/details/part-1-for-beginners-bag-of-words)'s tutorial
