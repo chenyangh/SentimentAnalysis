@@ -7,6 +7,7 @@ import time
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
+from sklearn.linear_model import SGDClassifier
 
 file_name = 'data/clean_data_no_stopwords_punkt'
 f = open(file_name, 'rb')
@@ -101,7 +102,7 @@ def create_bag_of_centroids(wordlist, word_centroid_map, num_clusters):
 
 
 def word2vec_classifier_train():
-    __f = open('feature/vector2-divby5-means', 'rb')
+    __f = open('feature/vector2-divby10-means', 'rb')
     idx = pickle.load(__f)
     __f.close()
     model_name = "feature/500features_20minwords_10context"
@@ -146,8 +147,19 @@ def word2vec_classifier_train():
     train_label = np.asarray(__train_data[:, 1], dtype="|S6")
     test_label = np.asarray(__test_data[:, 1], dtype="|S6")
 
-    train_naive_bayes(train_centroids, train_label, test_centroids, test_label)
+    train_svm(train_centroids, train_label, test_centroids, test_label)
     # Fitting the forest may take a few minutes
+
+
+def train_svm(train_centroids, train_label, test_centroids, test_label):
+    svm_clf = SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, n_iter=5, random_state=42)
+    svm_clf.fit(train_centroids, train_label)
+    result = svm_clf.predict(test_centroids)
+    count = 0
+    for i in range(len(test_label)):
+        if test_label[i] == result[i]:
+            count += 1
+    print(test_label, count / len(test_label))
 
 
 def train_random_forest(train_centroids, train_label, test_centroids, test_label):
@@ -162,9 +174,9 @@ def train_random_forest(train_centroids, train_label, test_centroids, test_label
     result = forest.predict(test_centroids)
     count = 0
     for i in range(len(test_label)):
-        if train_label[i] == result[i]:
+        if test_label[i] == result[i]:
             count += 1
-    print(train_label, count / len(test_label))
+    print(test_label, count / len(test_label))
 
 
 def train_naive_bayes(train_counts, label_to_train, test_counts_tf, label_to_test):
