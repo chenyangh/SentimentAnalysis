@@ -7,7 +7,7 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
 
 
-f = open('data/clean_data2', 'rb')
+f = open('data/clean_data_string', 'rb')
 clean_data = pickle.load(f)
 f.close()
 print('The total size of data set is', len(clean_data))
@@ -25,11 +25,12 @@ train_size = data_size - 5000  # select a test size of 5000
 data_train = data_array[:train_size]
 data_test = data_array[train_size:]
 review_to_train = data_train[:, 0]
-label_to_train = data_train[:, 1]
+label_to_train = np.asarray(data_train[:, 1], dtype="|S6")
 review_to_test = data_test[:, 0]
-label_to_test = data_test[:, 1]
+label_to_test = np.asarray(data_test[:, 1], dtype="|S6")
 
-def train_random_frost():
+
+def train_random_forest():
     IF_TRAIN = True  #
     if IF_TRAIN:
         # Prepare train data
@@ -41,14 +42,14 @@ def train_random_frost():
         forest = RandomForestClassifier(n_estimators)
         forest = forest.fit(train_data_features, label_to_train)
         print("Finish training Random Forest")
-        f = open('model/trained_forest_8000_' + str(n_estimators), 'wb')
-        pickle.dump(forest, f)
-        f.close()
+        __f = open('model/trained_forest_8000_' + str(n_estimators), 'wb')
+        pickle.dump(forest, __f)
+        __f.close()
         print('The total size of data set is', len(clean_data))
     else:
-        f = open('model/trained_forest_2000_500', 'rb')
-        forest = pickle.load(f)
-        f.close()
+        __f = open('model/trained_forest_2000_500', 'rb')
+        forest = pickle.load(__f)
+        __f.close()
 
     # Testing:
     # Prepare test data
@@ -99,6 +100,5 @@ def train_naive_bayes():
     print('TF-IDF Accuracy', count / len(label_to_test))
 
 
+train_random_forest()
 train_naive_bayes()
-
-
