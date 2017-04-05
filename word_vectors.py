@@ -8,6 +8,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_extraction.text import TfidfTransformer
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.linear_model import SGDClassifier
+from measurement import meass
 
 file_name = 'data/clean_data_no_stopwords_punkt'
 f = open(file_name, 'rb')
@@ -147,19 +148,18 @@ def word2vec_classifier_train():
     train_label = np.asarray(__train_data[:, 1], dtype="|S6")
     test_label = np.asarray(__test_data[:, 1], dtype="|S6")
 
+    print('svm')
     train_svm(train_centroids, train_label, test_centroids, test_label)
-    # Fitting the forest may take a few minutes
-
+    print('RF')
+    train_random_forest(train_centroids, train_label, test_centroids, test_label)
+    print('Naive Bayes')
+    train_naive_bayes(train_centroids, train_label, test_centroids, test_label)
 
 def train_svm(train_centroids, train_label, test_centroids, test_label):
     svm_clf = SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, n_iter=5, random_state=42)
     svm_clf.fit(train_centroids, train_label)
     result = svm_clf.predict(test_centroids)
-    count = 0
-    for i in range(len(test_label)):
-        if test_label[i] == result[i]:
-            count += 1
-    print(test_label, count / len(test_label))
+    meass(test_label, result)
 
 
 def train_random_forest(train_centroids, train_label, test_centroids, test_label):
@@ -172,16 +172,10 @@ def train_random_forest(train_centroids, train_label, test_centroids, test_label
     __f.close()
 
     result = forest.predict(test_centroids)
-    count = 0
-    for i in range(len(test_label)):
-        if test_label[i] == result[i]:
-            count += 1
-    print(test_label, count / len(test_label))
+    meass(test_label, result)
 
 
 def train_naive_bayes(train_counts, label_to_train, test_counts_tf, label_to_test):
-
-
     # TF model
     tf_transformer = TfidfTransformer(use_idf=False).fit(train_counts)
     train_tf = tf_transformer.transform(train_counts)
@@ -190,12 +184,7 @@ def train_naive_bayes(train_counts, label_to_train, test_counts_tf, label_to_tes
     test_result_tf = clf_tf.predict(test_tf)
 
     # Get accuracy
-    count = 0
-    for i in range(label_to_test.size):
-        if label_to_test[i] == test_result_tf[i]:
-            count += 1
-    print('TF Accuracy', count / len(label_to_test))
-
+    meass(label_to_test, test_result_tf)
     # TF IDF model
     tfidf_transformer = TfidfTransformer()
     train_tfidf = tfidf_transformer.fit_transform(train_counts)
@@ -206,11 +195,7 @@ def train_naive_bayes(train_counts, label_to_train, test_counts_tf, label_to_tes
 
     # Get accuracy
     count = 0
-    for i in range(label_to_test.size):
-        if label_to_test[i] == test_result_idf[i]:
-            count += 1
-    print('TF-IDF Accuracy', count / len(label_to_test))
-
+    meass(label_to_test, test_result_idf)
 
 word2vec_classifier_train()
 
