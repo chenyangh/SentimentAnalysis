@@ -41,7 +41,7 @@ def train_word2vec():
     print("Training model...")
     model = word2vec.Word2Vec(sentences, workers=num_workers,
                 size=num_features, min_count=min_word_count,
-                window=context, sample=downsampling)
+                window=context, sample=downsampling, sg=0)
 
     # If you don't plan to train the model any further, calling
     # init_sims will make the model much more memory-efficient.
@@ -155,6 +155,7 @@ def word2vec_classifier_train():
     print('Naive Bayes')
     train_naive_bayes(train_centroids, train_label, test_centroids, test_label)
 
+
 def train_svm(train_centroids, train_label, test_centroids, test_label):
     svm_clf = SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, n_iter=5, random_state=42)
     svm_clf.fit(train_centroids, train_label)
@@ -197,5 +198,5 @@ def train_naive_bayes(train_counts, label_to_train, test_counts_tf, label_to_tes
     count = 0
     meass(label_to_test, test_result_idf)
 
-word2vec_classifier_train()
+train_word2vec()
 
