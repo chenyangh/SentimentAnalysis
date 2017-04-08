@@ -9,5 +9,5 @@
     "max_pool_size": 4,
     "non_static": false,
     "num_epochs": 300,
-    "num_filters": 256
+    "num_filters": 128
 }

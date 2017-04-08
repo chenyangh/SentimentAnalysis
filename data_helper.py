@@ -52,7 +52,7 @@ def sentence_to_word_list(a_review):
     for word in tmp:
         words.extend(clean_str(word).split())
 
-    return words
+    return a_review.split()
 
 
 def train_word2vec():
@@ -105,8 +105,6 @@ def get_sentences():
             tmp = rf.readlines()
             for line in tmp:
                 sentences.extend(split_sentences(line))
-
-
     return sentences
 
 
@@ -148,7 +146,7 @@ def load_embeddings(vocabulary):
             word_embeddings[word] = model.wv.syn0[embed_dict[word].index]
         else:
             print(word, 'oov')
-            word_embeddings[word] = np.zeros(300)
+            word_embeddings[word] = np.random.uniform(-0.25, 0.25, 300)
     return word_embeddings
 
 
@@ -181,7 +179,9 @@ def build_vocab(sentences):
     for i in range(len(embed_inv_idx)):
         vocabulary_inv.append(embed_inv_idx[i])
 
-    vocabulary = {word: index for index, word in enumerate(vocabulary_inv)}
+    vocabulary = {}
+    for i in range(len(vocabulary_inv)):
+        vocabulary[vocabulary_inv[i]] = i
 
     return vocabulary, vocabulary_inv
 
@@ -207,16 +207,18 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
 def load_imdb():
     x_raw = []
     y_raw = []
-    flag = 0
-    for file in file_list:
-        flag += 1
-        with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
-            for line in rf.readlines():
-                if flag == 1:
-                    y_raw.append([1, 0])
-                else:
-                    y_raw.append([0, 1])
-                x_raw.append(sentence_to_word_list(line))
+
+    file = file_list[0]
+    with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
+        for line in rf.readlines():
+            y_raw.append([1, 0])
+            x_raw.append(sentence_to_word_list(line))
+
+    file = file_list[1]
+    with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
+        for line in rf.readlines():
+            y_raw.append([0, 1])
+            x_raw.append(sentence_to_word_list(line))
 
     return x_raw, y_raw
 

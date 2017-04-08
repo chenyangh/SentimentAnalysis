@@ -21,7 +21,7 @@ class TextCNNRNN(object):
             else:
                 W = tf.Variable(embedding_mat, name='W')
             self.embedded_chars = tf.nn.embedding_lookup(W, self.input_x)
-            emb = tf.expand_dims(self.embedded_chars, -1)
+            self.emb = tf.expand_dims(self.embedded_chars, -1)
 
         pooled_concat = []
         reduced = np.int32(np.ceil(sequence_length * 1.0 / max_pool_size))
@@ -34,7 +34,7 @@ class TextCNNRNN(object):
                 num_post = (filter_size - 1) - num_prio
                 pad_prio = tf.concat(1, [self.pad] * num_prio)
                 pad_post = tf.concat(1, [self.pad] * num_post)
-                emb_pad = tf.concat(1, [pad_prio, emb, pad_post])
+                emb_pad = tf.concat(1, [pad_prio, self.emb, pad_post])
 
                 filter_shape = [filter_size, embedding_size, 1, num_filters]
                 W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name='W')
@@ -204,11 +204,11 @@ class TextCNN(object):
 
         with tf.device('/cpu:0'), tf.name_scope('embedding'):
             if not non_static:
-                W = tf.constant(embedding_mat, name='W')
+                Ww = tf.constant(embedding_mat, name='Ww')
             else:
-                W = tf.Variable(embedding_mat, name='W')
-            self.embedded_chars = tf.nn.embedding_lookup(W, self.input_x)
-            emb = tf.expand_dims(self.embedded_chars, -1)
+                Ww = tf.Variable(embedding_mat, name='Ww')
+            self.embedded_chars = tf.nn.embedding_lookup(Ww, self.input_x)
+            self.emb = tf.expand_dims(self.embedded_chars, -1)
 
         pooled_concat = []
         reduced = np.int32(np.ceil(sequence_length * 1.0 / max_pool_size))
@@ -219,21 +219,19 @@ class TextCNN(object):
                 # sequence_length x emb_size x channel
                 num_prio = (filter_size - 1) // 2
                 num_post = (filter_size - 1) - num_prio
-                pad_prio = tf.concat(1, [self.pad] * num_prio)
-                pad_post = tf.concat(1, [self.pad] * num_post)
-                emb_pad = tf.concat(1, [pad_prio, emb, pad_post])
+
 
                 filter_shape = [filter_size, embedding_size, 1, num_filters]
-                W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name='W')
-                b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name='b')
-                conv = tf.nn.conv2d(emb_pad, W, strides=[1, 1, 1, 1], padding='VALID', name='conv')
+                W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
+                b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
+                conv = tf.nn.conv2d(self.emb, W, strides=[1, 1, 1, 1], padding='VALID', name='conv')
 
-                h = tf.nn.relu(tf.nn.bias_add(conv, b), name='relu')
+                h = tf.nn.tanh(tf.nn.bias_add(conv, b), name='tanh')
 
                 # Maxpooling over the outputs
                 pooled = tf.nn.max_pool(
                     h,
-                    ksize=[1, sequence_length, 1, 1],
+                    ksize=[1, sequence_length - filter_size + 1, 1, 1],
                     strides=[1, 1, 1, 1],
                     padding='VALID',
                     name="pool")

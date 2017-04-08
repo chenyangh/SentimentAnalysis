@@ -13,9 +13,6 @@ from text_cnn_rnn import TextCNNRNN, TextRNN, TextCNN
 from sklearn.model_selection import train_test_split
 import datetime
 
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-logging.getLogger().setLevel(logging.INFO)
-
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 def train_cnn_rnn():
@@ -27,7 +24,9 @@ def train_cnn_rnn():
 
     # Assign a 300 dimension vector to each word
     word_embeddings = data_helper.load_embeddings(vocabulary)
-    embedding_mat = [word_embeddings[word] for index, word in enumerate(vocabulary_inv)]
+    embedding_mat = []
+    for i in range(len(vocabulary_inv)):
+        embedding_mat.append(word_embeddings[vocabulary_inv[i]])
     embedding_mat = np.array(embedding_mat, dtype=np.float32)
 
     # Split the original dataset into train set and test set
@@ -65,7 +64,7 @@ def train_cnn_rnn():
                 l2_reg_lambda=params['l2_reg_lambda'])
 
             global_step = tf.Variable(0, name='global_step', trainable=False)
-            optimizer = tf.train.RMSPropOptimizer(1e-3, decay=0.9)
+            optimizer = tf.train.GradientDescentOptimizer(1e-3)
             grads_and_vars = optimizer.compute_gradients(cnn_rnn.loss)
             train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
@@ -120,7 +119,9 @@ def train_cnn_rnn():
                 }
                 summaries, _, step, loss, accuracy = sess.run([train_summary_op, train_op, global_step, cnn_rnn.loss, cnn_rnn.accuracy], feed_dict)
                 time_str = datetime.datetime.now().isoformat()
+                print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
                 train_summary_writer.add_summary(summaries, step)
+                # print(accuracy)
 
 
             def dev_step(x_batch, y_batch):
@@ -135,7 +136,7 @@ def train_cnn_rnn():
                 summaries, step, loss, accuracy, num_correct, predictions = sess.run(
                     [dev_summary_op, global_step, cnn_rnn.loss, cnn_rnn.accuracy, cnn_rnn.num_correct, cnn_rnn.predictions], feed_dict)
                 dev_summary_writer.add_summary(summaries, step)
-                return accuracy, loss, num_correct, predictions
+                print("step {}, loss {:g}, acc {:g}".format(step, loss, accuracy))
 
             saver = tf.train.Saver(tf.global_variables())
             sess.run(tf.global_variables_initializer())
@@ -153,26 +154,11 @@ def train_cnn_rnn():
 
                 # Evaluate the model with x_dev and y_dev
                 if current_step % params['evaluate_every'] == 0:
-                    dev_batches = data_helper.batch_iter(list(zip(x_dev, y_dev)), params['batch_size'], 1)
+                    print("Evaluation:")
+                    dev_step(x_dev, y_dev)
 
-                    total_dev_correct = 0
-                    for dev_batch in dev_batches:
-                        try:
-                            x_dev_batch, y_dev_batch = zip(*dev_batch)
-                        except ValueError:
-                            print('dev set unpacked')
-                            break
 
-                        acc, loss, num_dev_correct, predictions = dev_step(x_dev_batch, y_dev_batch)
-                        total_dev_correct += num_dev_correct
-                    accuracy = float(total_dev_correct) / len(y_dev)
-                    logging.info('Accuracy on dev set: {}'.format(accuracy))
 
-                    if accuracy >= best_accuracy:
-                        best_accuracy, best_at_step = accuracy, current_step
-                        path = saver.save(sess, checkpoint_prefix, global_step=current_step)
-                        logging.critical('Saved model {} at step {}'.format(path, best_at_step))
-                        logging.critical('Best accuracy {} at step {}'.format(best_accuracy, best_at_step))
             logging.critical('Training is complete, testing the best model on x_test and y_test')
 
             # Evaluate x_test and y_test
@@ -194,8 +180,8 @@ def train_cnn_rnn():
     with open(trained_dir + 'labels.json', 'w') as outfile:
         json.dump(labels, outfile, indent=4, ensure_ascii=False)
 
-    os.rename(path, trained_dir + 'best_model.ckpt')
-    os.rename(path + '.meta', trained_dir + 'best_model.meta')
+    # os.rename(path, trained_dir + 'best_model.ckpt')
+    # os.rename(path + '.meta', trained_dir + 'best_model.meta')
     shutil.rmtree(checkpoint_dir)
     logging.critical('{} has been removed'.format(checkpoint_dir))
 
