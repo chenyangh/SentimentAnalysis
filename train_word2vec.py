@@ -77,13 +77,10 @@ def split_sentences(review, __remove_stopwords=False):
     return sentences
 
 
-import threading
-
-from multiprocessing import Process
+import multiprocessing
 
 
-
-def run(idx):
+def work(idx):
     __i = idx
     print('Starting thread', str(__i + 1))
     sentences = []
@@ -104,15 +101,12 @@ def run(idx):
 
 
 try:
-    __threads = []
-    for idx in range(5):
-        __threads.append(Process(target=run, args=(idx,)))
-
-    for idx in range(5):
-        __threads[idx].start()
-
-    for idx in range(5):
-        __threads[idx].join()
+    pool = multiprocessing.Pool(5)
+    total_tasks = 5
+    tasks = range(total_tasks)
+    results = pool.map_async(work, tasks)
+    pool.close()
+    pool.join()
 except:
     print("Error: unable to start thread")
 
