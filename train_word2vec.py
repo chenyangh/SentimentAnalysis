@@ -76,20 +76,46 @@ def split_sentences(review, __remove_stopwords=False):
             sentences.append(tmp)
     return sentences
 
-batch = 2000000
-for i in range(5):
-    sentences = []
-    count = 0
-    for item in range(batch*i, min(batch*(i+1), len(data))):
-        if count % 10000 == 1:
-            print(count)
-        count += 1
-        sent = data[item][0]
-        sentences.extend(split_sentences(sent))
 
-    with open('data/book_sents_'+ str(i) +'.pkl', 'bw') as f:
-        pickle.dump(sentences, f)
-    del sentences
+import threading
+
+
+class single_therad(threading.Thread):
+    def __init__(self, i):
+        threading.Thread.__init__(self)
+        self.idx = i
+
+    def run(self):
+        __i = self.idx
+        print('Starting thread', str(__i + 1))
+        sentences = []
+        count = 0
+        batch = 2000000
+        for item in range(batch * __i, min(batch * (__i + 1), len(data))):
+            if count % 10000 == 1:
+                print('Thread', str(__i + 1), 'at', count, 'out of', str(min(batch * (__i + 1), len(data))-batch*__i))
+            count += 1
+            sent = data[item][0]
+            sentences.extend(split_sentences(sent))
+
+        with open('data/book_sents_' + str(__i) + '.pkl', 'bw') as f:
+            pickle.dump(sentences, f)
+        del sentences
+        print('Finish thread', str(__i + 1))
+
+
+try:
+    __thread = []
+    for idx in range(5):
+        __thread.append(single_therad(idx))
+
+    for idx in range(5):
+        __thread[idx].start(single_therad(idx))
+
+    for idx in range(5):
+        __thread[idx].join(single_therad(idx))
+except:
+    print("Error: unable to start thread")
 
 
 from gensim.models.word2vec import Word2Vec
