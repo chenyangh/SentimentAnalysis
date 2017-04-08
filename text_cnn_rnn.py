@@ -226,7 +226,7 @@ class TextCNN(object):
                 b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
                 conv = tf.nn.conv2d(self.emb, W, strides=[1, 1, 1, 1], padding='VALID', name='conv')
 
-                h = tf.nn.tanh(tf.nn.bias_add(conv, b), name='tanh')
+                h = tf.nn.relu(tf.nn.bias_add(conv, b), name='relu')
 
                 # Maxpooling over the outputs
                 pooled = tf.nn.max_pool(

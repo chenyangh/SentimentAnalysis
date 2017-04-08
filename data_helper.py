@@ -10,8 +10,9 @@ import gensim as gs
 from collections import Counter
 import logging
 from gensim.models import word2vec
+import gensim
 
-logging.getLogger().setLevel(logging.INFO)
+# logging.getLogger().setLevel(logging.INFO)
 import re
 import nltk
 
@@ -52,7 +53,7 @@ def sentence_to_word_list(a_review):
     for word in tmp:
         words.extend(clean_str(word).split())
 
-    return a_review.split()
+    return words
 
 
 def train_word2vec():
@@ -125,10 +126,12 @@ def clean_str(s):
     s = re.sub(r"\s{2,}", " ", s)
     return s.strip().lower()
 
-model_name = os.path.join('feature', 'imdb_cbow_word2vec')
-model = word2vec.Word2Vec.load(model_name)
-embed_dict = model.wv.vocab
+#model_name = os.path.join('feature', 'imdb_skip_gram_word2vec')
+#model = word2vec.Word2Vec.load(model_name)
 
+
+model = gensim.models.KeyedVectors.load_word2vec_format('feature/GoogleNews-vectors-negative300.bin', binary=True)
+embed_dict = model.vocab
 
 def load_embeddings(vocabulary):
     # Sentiment embedding
@@ -143,10 +146,12 @@ def load_embeddings(vocabulary):
     word_embeddings = {}
     for word in vocabulary:
         if word in embed_dict:
-            word_embeddings[word] = model.wv.syn0[embed_dict[word].index]
+            vec = model.syn0[embed_dict[word].index]
+            word_embeddings[word] = (vec - min(vec)) / np.add(max(vec), -min(vec)) * 2 - 1
+
         else:
             print(word, 'oov')
-            word_embeddings[word] = np.random.uniform(-0.25, 0.25, 300)
+            word_embeddings[word] = np.random.uniform(-1, 1, 300)
     return word_embeddings
 
 
@@ -174,15 +179,9 @@ def pad_sentences(sentences, padding_word="<PAD/>", forced_sequence_length=None)
 
 
 def build_vocab(sentences):
-    vocabulary_inv = ['<PAD/>']
-    embed_inv_idx = model.wv.index2word
-    for i in range(len(embed_inv_idx)):
-        vocabulary_inv.append(embed_inv_idx[i])
-
-    vocabulary = {}
-    for i in range(len(vocabulary_inv)):
-        vocabulary[vocabulary_inv[i]] = i
-
+    word_counts = Counter(itertools.chain(*sentences))
+    vocabulary_inv = [word[0] for word in word_counts.most_common()]
+    vocabulary = {word: index for index, word in enumerate(vocabulary_inv)}
     return vocabulary, vocabulary_inv
 
 
@@ -238,3 +237,4 @@ def load_data():
 
 if __name__ == "__main__":
     train_word2vec()
+

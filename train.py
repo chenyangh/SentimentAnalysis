@@ -35,9 +35,6 @@ def train_cnn_rnn():
     # Split the train set into train set and dev set
     x_train, x_dev, y_train, y_dev = train_test_split(x, y, test_size=0.1)
 
-    logging.info('x_train: {}, x_dev: {}, x_test: {}'.format(len(x_train), len(x_dev), len(x_test)))
-    logging.info('y_train: {}, y_dev: {}, y_test: {}'.format(len(y_train), len(y_dev), len(y_test)))
-
     # Create a directory, everything related to the training will be saved in this directory
     timestamp = str(int(time.time()))
     trained_dir = './trained_results_' + timestamp + '/'
@@ -64,10 +61,11 @@ def train_cnn_rnn():
                 l2_reg_lambda=params['l2_reg_lambda'])
 
             global_step = tf.Variable(0, name='global_step', trainable=False)
-            optimizer = tf.train.GradientDescentOptimizer(1e-3)
+            optimizer = tf.train.AdamOptimizer(1e-3)
             grads_and_vars = optimizer.compute_gradients(cnn_rnn.loss)
             train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
+            # Keep track of gradient values and sparsity (optional)
             grad_summaries = []
             for g, v in grads_and_vars:
                 if g is not None:
@@ -104,6 +102,7 @@ def train_cnn_rnn():
                 shutil.rmtree(checkpoint_dir)
             os.makedirs(checkpoint_dir)
             checkpoint_prefix = os.path.join(checkpoint_dir, 'model')
+            saver = tf.train.Saver(tf.global_variables(), max_to_keep=5)
 
             def real_len(batches):
                 return [np.ceil(np.argmin(batch + [0]) * 1.0 / params['max_pool_size']) for batch in batches]
@@ -117,9 +116,11 @@ def train_cnn_rnn():
                     cnn_rnn.pad: np.zeros([len(x_batch), 1, params['embedding_dim'], 1]),
                     cnn_rnn.real_len: real_len(x_batch),
                 }
-                summaries, _, step, loss, accuracy = sess.run([train_summary_op, train_op, global_step, cnn_rnn.loss, cnn_rnn.accuracy], feed_dict)
+                summaries, _, step, loss, accuracy = sess.run(
+                    [train_summary_op, train_op, global_step, cnn_rnn.loss, cnn_rnn.accuracy],
+                    feed_dict)
                 time_str = datetime.datetime.now().isoformat()
-                print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+                # print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
                 train_summary_writer.add_summary(summaries, step)
                 # print(accuracy)
 
@@ -134,11 +135,11 @@ def train_cnn_rnn():
                     cnn_rnn.real_len: real_len(x_batch),
                 }
                 summaries, step, loss, accuracy, num_correct, predictions = sess.run(
-                    [dev_summary_op, global_step, cnn_rnn.loss, cnn_rnn.accuracy, cnn_rnn.num_correct, cnn_rnn.predictions], feed_dict)
+                    [dev_summary_op, global_step, cnn_rnn.loss, cnn_rnn.accuracy, cnn_rnn.num_correct, cnn_rnn.predictions],
+                    feed_dict)
                 dev_summary_writer.add_summary(summaries, step)
                 print("step {}, loss {:g}, acc {:g}".format(step, loss, accuracy))
 
-            saver = tf.train.Saver(tf.global_variables())
             sess.run(tf.global_variables_initializer())
 
             # Training starts here
@@ -154,12 +155,11 @@ def train_cnn_rnn():
 
                 # Evaluate the model with x_dev and y_dev
                 if current_step % params['evaluate_every'] == 0:
-                    print("Evaluation:")
+                    print("Evaluation:", end=' ')
                     dev_step(x_dev, y_dev)
-
-
-
-            logging.critical('Training is complete, testing the best model on x_test and y_test')
+                    print("Test:", end=' ')
+                    dev_step(x_test, y_test)
+            print('Training is complete, testing the best model on x_test and y_test')
 
             # Evaluate x_test and y_test
 
