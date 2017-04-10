@@ -9,15 +9,15 @@ import data_helper
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from text_cnn_rnn import TextCNNRNN, TextRNN, TextCNN
+from text_cnn_rnn import TextCNNRNN, TextRNN, TextCNN, TextCNNRNN2
 from sklearn.model_selection import train_test_split
 import datetime
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 def train_cnn_rnn():
 
-    x_, y_, vocabulary, vocabulary_inv, labels = data_helper.load_data()
+    x_, y_, x_test, y_test, vocabulary, vocabulary_inv, labels = data_helper.load_data()
 
     training_config = 'training_config.json'
     params = json.loads(open(training_config).read())
@@ -30,10 +30,9 @@ def train_cnn_rnn():
     embedding_mat = np.array(embedding_mat, dtype=np.float32)
 
     # Split the original dataset into train set and test set
-    x, x_test, y, y_test = train_test_split(x_, y_, test_size=0.1)
 
     # Split the train set into train set and dev set
-    x_train, x_dev, y_train, y_dev = train_test_split(x, y, test_size=0.1)
+    x_train, x_dev, y_train, y_dev = train_test_split(x_, y_, test_size=0.1)
 
     # Create a directory, everything related to the training will be saved in this directory
     timestamp = str(int(time.time()))
@@ -48,7 +47,7 @@ def train_cnn_rnn():
         sess = tf.Session(config=session_conf)
         with sess.as_default():
 
-            cnn_rnn = TextCNN(
+            cnn_rnn = TextCNNRNN2(
                 embedding_mat=embedding_mat,
                 sequence_length=x_train.shape[1],
                 num_classes=y_train.shape[1],
@@ -62,6 +61,7 @@ def train_cnn_rnn():
 
             global_step = tf.Variable(0, name='global_step', trainable=False)
             optimizer = tf.train.AdamOptimizer(1e-3)
+            # optimizer = tf.train.RMSPropOptimizer(1e-3)
             grads_and_vars = optimizer.compute_gradients(cnn_rnn.loss)
             train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
@@ -139,6 +139,7 @@ def train_cnn_rnn():
                     feed_dict)
                 dev_summary_writer.add_summary(summaries, step)
                 print("step {}, loss {:g}, acc {:g}".format(step, loss, accuracy))
+                return accuracy
 
             sess.run(tf.global_variables_initializer())
 
@@ -156,9 +157,12 @@ def train_cnn_rnn():
                 # Evaluate the model with x_dev and y_dev
                 if current_step % params['evaluate_every'] == 0:
                     print("Evaluation:", end=' ')
-                    dev_step(x_dev, y_dev)
+                    _ = dev_step(x_dev, y_dev)
                     print("Test:", end=' ')
-                    dev_step(x_test, y_test)
+                    acc_tmp = dev_step(x_test, y_test)
+                    if acc_tmp > best_accuracy:
+                        best_accuracy = acc_tmp
+                    print('best accuracy is', best_accuracy)
             print('Training is complete, testing the best model on x_test and y_test')
 
             # Evaluate x_test and y_test

@@ -100,15 +100,15 @@ def work(idx):
     print('Finish thread', str(__i + 1))
 
 
-try:
-    pool = multiprocessing.Pool(5)
-    total_tasks = 5
-    tasks = range(total_tasks)
-    results = pool.map_async(work, tasks)
-    pool.close()
-    pool.join()
-except:
-    print("Error: unable to start thread")
+# try:
+#     pool = multiprocessing.Pool(5)
+#     total_tasks = 5
+#     tasks = range(total_tasks)
+#     results = pool.map_async(work, tasks)
+#     pool.close()
+#     pool.join()
+# except:
+#     print("Error: unable to start thread")
 
 
 from gensim.models.word2vec import Word2Vec
@@ -131,7 +131,7 @@ with open('data/book_sents_' + str(i) + '.pkl', 'br') as f:
 print("Training model skip_gram...")
 model = Word2Vec(sentences, workers=num_workers,
             size=num_features, min_count=min_word_count,
-            window=context, sample=downsampling, sg=1)
+            window=context, sample=downsampling, sg=0)
 del sentences
 print('finish', str(i), 'th file')
 
@@ -145,5 +145,5 @@ for i in range(1, 5):
     print('finish', str(i), 'th file')
     del sentences
 
-with open('data/book_skip_gram2', 'bw') as f:
+with open('data/book_cbow', 'bw') as f:
     pickle.dump(model, f)

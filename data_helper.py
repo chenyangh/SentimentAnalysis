@@ -130,8 +130,44 @@ def clean_str(s):
 #model = word2vec.Word2Vec.load(model_name)
 
 
-model = gensim.models.KeyedVectors.load_word2vec_format('feature/GoogleNews-vectors-negative300.bin', binary=True)
-embed_dict = model.vocab
+def load_word2vec(vocabulary):
+    model = gensim.models.KeyedVectors.load_word2vec_format('feature/GoogleNews-vectors-negative300.bin', binary=True)
+    embed_dict = model.vocab
+    word_embeddings = {}
+    num_oov = 0
+    for word in vocabulary:
+        if word in embed_dict:
+            vec = model.syn0[embed_dict[word].index]
+            word_embeddings[word] = (vec - min(vec)) / np.add(max(vec), -min(vec)) * 2 - 1
+
+        else:
+            num_oov += 1
+            word_embeddings[word] = np.random.uniform(-1, 1, 300)
+    print('Numb of oov is', num_oov)
+    return word_embeddings
+
+
+def load_senti_emb(vocabulary):
+    sent_emb_dict = {}
+    with open('feature/-round-170', 'r') as f:
+        for line in f.readlines():
+            line = line.split()
+            word = line[0]
+            vector = [np.float32(x) for x in line[1:]]
+            sent_emb_dict[word] = vector
+
+    word_embeddings = {}
+    num_oov = 0
+    for word in vocabulary:
+        if word in sent_emb_dict:
+            vec = sent_emb_dict[word]
+            word_embeddings[word] = (vec - min(vec)) / np.add(max(vec), -min(vec)) * 2 - 1
+        else:
+            num_oov += 1
+            word_embeddings[word] = np.random.uniform(-1, 1, 300)
+    print('Numb of oov is', num_oov)
+    return word_embeddings
+
 
 def load_embeddings(vocabulary):
     # Sentiment embedding
@@ -142,20 +178,14 @@ def load_embeddings(vocabulary):
 
     # word2vec embedding
     # if embedding == 'cbow':
+    word_embeddings = load_senti_emb(vocabulary)
 
-    word_embeddings = {}
-    for word in vocabulary:
-        if word in embed_dict:
-            vec = model.syn0[embed_dict[word].index]
-            word_embeddings[word] = (vec - min(vec)) / np.add(max(vec), -min(vec)) * 2 - 1
+    # word2vec model
 
-        else:
-            print(word, 'oov')
-            word_embeddings[word] = np.random.uniform(-1, 1, 300)
     return word_embeddings
 
 
-def pad_sentences(sentences, padding_word="<PAD/>", forced_sequence_length=None):
+def pad_sentences(sentences, padding_word="<PAD/>", forced_sequence_length=None, given_pad_len=None):
     """Pad setences during training or prediction"""
     if forced_sequence_length is None:  # Train
         sequence_length = max(len(x) for x in sentences)
@@ -167,6 +197,8 @@ def pad_sentences(sentences, padding_word="<PAD/>", forced_sequence_length=None)
     padded_sentences = []
     for i in range(len(sentences)):
         sentence = sentences[i]
+        if given_pad_len is not None:
+            sequence_length = given_pad_len
         num_padding = sequence_length - len(sentence)
 
         if num_padding < 0:  # Prediction: cut off the sentence if it is longer than the sequence length
@@ -175,7 +207,7 @@ def pad_sentences(sentences, padding_word="<PAD/>", forced_sequence_length=None)
         else:
             padded_sentence = sentence + [padding_word] * num_padding
         padded_sentences.append(padded_sentence)
-    return padded_sentences
+    return padded_sentences, sequence_length
 
 
 def build_vocab(sentences):
@@ -203,36 +235,80 @@ def batch_iter(data, batch_size, num_epochs, shuffle=True):
             yield shuffled_data[start_index:end_index]
 
 
+# file_list = ['emotion.neg.0.txt', 'emotion.pos.0.txt']
 def load_imdb():
     x_raw = []
     y_raw = []
 
-    file = file_list[0]
+    file = file_list[0] # neg
     with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
         for line in rf.readlines():
             y_raw.append([1, 0])
             x_raw.append(sentence_to_word_list(line))
 
-    file = file_list[1]
+    file = file_list[1] # pos
     with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
         for line in rf.readlines():
             y_raw.append([0, 1])
             x_raw.append(sentence_to_word_list(line))
+    return x_raw, y_raw
 
+
+def load_imdb_train():
+    file_list_train = ['emotion.neg.0.txt.train', 'emotion.pos.0.txt.train']
+    x_raw = []
+    y_raw = []
+
+    file = file_list_train[0]  # neg
+    with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
+        for line in rf.readlines():
+            y_raw.append([1, 0])
+            x_raw.append(sentence_to_word_list(line))
+
+    file = file_list_train[1]  # pos
+    with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
+        for line in rf.readlines():
+            y_raw.append([0, 1])
+            x_raw.append(sentence_to_word_list(line))
+    return x_raw, y_raw
+
+
+def load_imdb_test():
+    file_list_test = ['emotion.neg.0.txt.test', 'emotion.pos.0.txt.test']
+    x_raw = []
+    y_raw = []
+
+    file = file_list_test[0]  # neg
+    with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
+        for line in rf.readlines():
+            y_raw.append([1, 0])
+            x_raw.append(sentence_to_word_list(line))
+
+    file = file_list_test[1]  # pos
+    with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
+        for line in rf.readlines():
+            y_raw.append([0, 1])
+            x_raw.append(sentence_to_word_list(line))
     return x_raw, y_raw
 
 
 def load_data():
     x_raw, y_raw = load_imdb()
-
-    x_raw = pad_sentences(x_raw)
+    x_raw, sequence_length = pad_sentences(x_raw)
     vocabulary, vocabulary_inv = build_vocab(x_raw)
 
-    x = np.array([[vocabulary[word] for word in sentence] for sentence in x_raw])
-    y = np.array(y_raw)
+    x_train_dev, y_train_dev = load_imdb_train()
+    x_train_dev, _ = pad_sentences(x_train_dev, given_pad_len=sequence_length)
+    x = np.array([[vocabulary[word] for word in sentence] for sentence in x_train_dev])
+    y = np.array(y_train_dev)
+
+    x_test, y_test = load_imdb_test()
+    x_test, _ = pad_sentences(x_test, given_pad_len=sequence_length)
+    x_test = np.array([[vocabulary[word] for word in sentence] for sentence in x_test])
+    y_test = np.array(y_test)
 
     labels = ['negative', 'positive']
-    return x, y, vocabulary, vocabulary_inv, labels
+    return x, y, x_test, y_test, vocabulary, vocabulary_inv, labels
 
 
 if __name__ == "__main__":
