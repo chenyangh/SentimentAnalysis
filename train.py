@@ -12,11 +12,11 @@ import tensorflow as tf
 from text_cnn_rnn import TextCNNRNN, TextRNN, TextCNN, TextCNNRNN2
 from sklearn.model_selection import train_test_split
 import datetime
+import pickle
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 def train_cnn_rnn():
-
     x_, y_, x_test, y_test, vocabulary, vocabulary_inv, labels = data_helper.load_data()
 
     training_config = 'training_config.json'
@@ -47,7 +47,7 @@ def train_cnn_rnn():
         sess = tf.Session(config=session_conf)
         with sess.as_default():
 
-            cnn_rnn = TextCNNRNN2(
+            cnn_rnn = TextCNN(
                 embedding_mat=embedding_mat,
                 sequence_length=x_train.shape[1],
                 num_classes=y_train.shape[1],
@@ -139,7 +139,7 @@ def train_cnn_rnn():
                     feed_dict)
                 dev_summary_writer.add_summary(summaries, step)
                 print("step {}, loss {:g}, acc {:g}".format(step, loss, accuracy))
-                return accuracy
+                return accuracy, predictions
 
             sess.run(tf.global_variables_initializer())
 
@@ -156,10 +156,15 @@ def train_cnn_rnn():
 
                 # Evaluate the model with x_dev and y_dev
                 if current_step % params['evaluate_every'] == 0:
+
+
+
                     print("Evaluation:", end=' ')
                     _ = dev_step(x_dev, y_dev)
                     print("Test:", end=' ')
-                    acc_tmp = dev_step(x_test, y_test)
+                    acc_tmp, pred__ = dev_step(x_test, y_test)
+                    with open('results/prediction' + str(current_step), 'bw') as f:
+                        pickle.dump(pred__, f)
                     if acc_tmp > best_accuracy:
                         best_accuracy = acc_tmp
                     print('best accuracy is', best_accuracy)

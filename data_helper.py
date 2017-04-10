@@ -126,8 +126,7 @@ def clean_str(s):
     s = re.sub(r"\s{2,}", " ", s)
     return s.strip().lower()
 
-#model_name = os.path.join('feature', 'imdb_skip_gram_word2vec')
-#model = word2vec.Word2Vec.load(model_name)
+
 
 
 def load_word2vec(vocabulary):
@@ -147,9 +146,34 @@ def load_word2vec(vocabulary):
     return word_embeddings
 
 
+def load_random_word2vec(vocabulary):
+    word_embeddings = {}
+    for word in vocabulary:
+        word_embeddings[word] = np.random.uniform(-1, 1, 300)
+    return word_embeddings
+
+
+def load_my_word2vec(vocabulary):
+    model_name = os.path.join('feature', 'imdb_cbow_word2vec')
+    model = word2vec.Word2Vec.load(model_name)
+    embed_dict = model.wv.vocab
+    word_embeddings = {}
+    num_oov = 0
+    for word in vocabulary:
+        if word in embed_dict:
+            vec = model.wv.syn0[embed_dict[word].index]
+            word_embeddings[word] = (vec - min(vec)) / np.add(max(vec), -min(vec)) * 2 - 1
+
+        else:
+            num_oov += 1
+            word_embeddings[word] = np.random.uniform(-1, 1, 300)
+    print('Numb of oov is', num_oov)
+    return word_embeddings
+
+
 def load_senti_emb(vocabulary):
     sent_emb_dict = {}
-    with open('feature/-round-170', 'r') as f:
+    with open('feature/-round-499', 'r') as f:
         for line in f.readlines():
             line = line.split()
             word = line[0]

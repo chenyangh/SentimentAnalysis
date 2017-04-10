@@ -1,7 +1,7 @@
 import random
 import numpy as np
 import re
-
+import pickle
 
 def clean_str(s):
     s = re.sub(r"[^A-Za-z0-9:(),!?\'\`]", " ", s)
@@ -113,4 +113,19 @@ def p2():
             idx += 1
         wf.write('<unk> ' + str(idx))
 
-p1_1()
+
+with open('results/prediction2500', 'br') as f:
+    data = pickle.load(f)
+
+wrong_neg = []
+s_neg = list(data[:534])
+for item in range(len(s_neg)):
+    print(item)
+    if s_neg[item] == 1:
+        wrong_neg.append(item)
+
+wrong_pos = []
+s_pos = list(data[534:])
+for item in range(len(s_pos)):
+    if s_pos[item] == 0:
+        wrong_pos.append(item)

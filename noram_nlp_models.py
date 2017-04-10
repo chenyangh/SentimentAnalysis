@@ -8,7 +8,9 @@ from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import f1_score, accuracy_score
 from sklearn.linear_model import SGDClassifier
 from nltk.corpus import stopwords
-from data_helper 
+from data_helper import load_senti_emb
+from sklearn.cluster import KMeans
+
 
 def create_bow_feature():
     x_raw, y_raw = load_imdb()
@@ -23,7 +25,7 @@ def create_bow_feature():
     x, x_test, y, y_test = train_test_split(x_raw_2,  y_raw_2, test_size=0.1)
     x_train, x_dev, y_train, y_dev = train_test_split(x, y, test_size=0.1)
 
-    bag_of_words_len = 400
+    bag_of_words_len = 5000
     vectorizer = CountVectorizer(analyzer="word", tokenizer=None,
                                  preprocessor=None, stop_words=stopwords.words("english"),
                                  max_features=bag_of_words_len)
@@ -33,6 +35,8 @@ def create_bow_feature():
     x_test_fea = vectorizer.transform(x_test)
     x_test_fea = x_test_fea.toarray()
 
+
+    print('train_svm', train_svm(x_train_fea, y_train, x_test_fea, y_test))
 
 def create_emb_feature():
     pass
@@ -69,7 +73,9 @@ def nb_tfidf(x_train_fea, y_train, x_test_fea, y_test):
 
 
 def train_svm(x_train_fea, y_train, x_test_fea, y_test):
-    svm_clf = SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, n_iter=5, random_state=42)
+    svm_clf = SGDClassifier(loss='hinge', penalty='l2', alpha=1e-3, n_iter=10, random_state=42)
     svm_clf.fit(x_train_fea, y_train)
     result = svm_clf.predict(x_test_fea)
     return accuracy_score(y_test, result)
+
+create_bow_feature()
