@@ -19,18 +19,6 @@ import nltk
 file_list = ['emotion.neg.0.txt', 'emotion.pos.0.txt']
 tokenizer = nltk.data.load('tokenizers/punkt/english.pickle')
 embedding = 'cbow'  # optional senti | cbow | skip
-def get_voc_file():
-    with open('vocb.txt', 'w') as wf:
-        voc_dict = {}
-        for file in file_list:
-            with open('data/'+file, 'r', encoding="ISO-8859-1") as rf:
-                for word in rf.read().split():
-                    if word not in voc_dict:
-                        voc_dict[word] = 1
-                    else:
-                        voc_dict[word] += 1
-        for voc in voc_dict:
-            wf.write(voc + ' ' + str(voc_dict[voc]) + '\n')
 
 
 def split_sentences(review, __remove_stopwords=False):
@@ -110,7 +98,7 @@ def get_sentences():
 
 
 def clean_str(s):
-    s = re.sub(r"[^A-Za-z0-9:(),!?\'\`]", " ", s)
+    s = re.sub(r"[^A-Za-z0-9]", " ", s)
     s = re.sub(r" : ", ":", s)
     s = re.sub(r"\'s", " \'s", s)
     s = re.sub(r"\'ve", " \'ve", s)
@@ -127,6 +115,9 @@ def clean_str(s):
     return s.strip().lower()
 
 
+def remove_punctuation(s):
+    s = re.sub(r"[^A-Za-z0-9]", " ", s)
+    return s.strip().lower()
 
 
 def load_word2vec(vocabulary):
@@ -172,8 +163,10 @@ def load_my_word2vec(vocabulary):
 
 
 def load_senti_emb(vocabulary):
+    pretrained_word2vec_embbeding = load_word2vec(vocabulary)
+
     sent_emb_dict = {}
-    with open('feature/-round-499', 'r') as f:
+    with open('feature/-round-431', 'r') as f:
         for line in f.readlines():
             line = line.split()
             word = line[0]
@@ -186,6 +179,8 @@ def load_senti_emb(vocabulary):
         if word in sent_emb_dict:
             vec = sent_emb_dict[word]
             word_embeddings[word] = (vec - min(vec)) / np.add(max(vec), -min(vec)) * 2 - 1
+        elif word in pretrained_word2vec_embbeding:
+            word_embeddings[word] = pretrained_word2vec_embbeding[word]
         else:
             num_oov += 1
             word_embeddings[word] = np.random.uniform(-1, 1, 300)

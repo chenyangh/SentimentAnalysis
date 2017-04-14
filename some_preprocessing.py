@@ -20,6 +20,9 @@ def clean_str(s):
     s = re.sub(r"\s{2,}", " ", s)
     return s.strip().lower()
 
+def remove_punctuation(s):
+    s = re.sub(r"[^A-Za-z0-9]", " ", s)
+    return s.strip().lower()
 
 def p1():
     file_list = ['emotion.neg.0.txt', 'emotion.pos.0.txt']
@@ -113,19 +116,69 @@ def p2():
             idx += 1
         wf.write('<unk> ' + str(idx))
 
+def p2_1():
 
-with open('results/prediction2500', 'br') as f:
-    data = pickle.load(f)
+    file_list = ['IMDB50K_train/emotion_pos.0.txt', 'IMDB50K_train/emotion_pos.1.txt', 'IMDB50K_train/emotion_pos.2.txt',
+                 'IMDB50K_train/emotion_pos.3.txt',
+                 'IMDB50K_train/emotion_neg.0.txt', 'IMDB50K_train/emotion_neg.1.txt',
+                 'IMDB50K_train/emotion_neg.2.txt', 'IMDB50K_train/emotion_neg.3.txt']
+    with open('vocb.txt', 'w') as wf:
+        voc_dict = {}
+        for file in file_list:
+            with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
+                for word in rf.read().split():
+                    if word not in voc_dict:
+                        voc_dict[word] = 1
+                    else:
+                        voc_dict[word] += 1
+        idx = 0
+        for voc in voc_dict:
+            wf.write(voc + ' ' + str(idx) + '\n')
+            idx += 1
+        wf.write('<unk> ' + str(idx))
 
-wrong_neg = []
-s_neg = list(data[:534])
-for item in range(len(s_neg)):
-    print(item)
-    if s_neg[item] == 1:
-        wrong_neg.append(item)
+def p3():
+    with open('results/prediction2500', 'br') as f:
+        data = pickle.load(f)
 
-wrong_pos = []
-s_pos = list(data[534:])
-for item in range(len(s_pos)):
-    if s_pos[item] == 0:
-        wrong_pos.append(item)
+    wrong_neg = []
+    s_neg = list(data[:534])
+    for item in range(len(s_neg)):
+        print(item)
+        if s_neg[item] == 1:
+            wrong_neg.append(item)
+
+    wrong_pos = []
+    s_pos = list(data[534:])
+    for item in range(len(s_pos)):
+        if s_pos[item] == 0:
+            wrong_pos.append(item)
+
+
+def p4():
+    file_list = ['emotion.neg.0.txt.test', 'emotion.neg.0.txt.train', 'emotion.pos.0.txt.test', 'emotion.pos.0.txt.train']
+    for file in file_list:
+        with open('data/' + file, 'r', encoding="ISO-8859-1") as f1:
+            with open('data/' + file + '.0', 'w') as f2:
+                for line in f1.readlines():
+                    f2.write(' '.join(remove_punctuation(line).split()) + '\n')
+
+def p4_1():
+    file_list = ['emotion.neg.0.txt.train', 'emotion.pos.0.txt.train']
+    with open('vocb.txt', 'w') as wf:
+        voc_dict = {}
+        for file in file_list:
+            with open('data/' + file, 'r', encoding="ISO-8859-1") as f1:
+                for word in f1.read().split():
+                    if word not in voc_dict:
+                        voc_dict[word] = 1
+                    else:
+                        voc_dict[word] += 1
+            idx = 0
+        for voc in voc_dict:
+            wf.write(voc + ' ' + str(idx) + '\n')
+            idx += 1
+        wf.write('<unk> ' + str(idx))
+
+p4_1()
+

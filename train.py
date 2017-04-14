@@ -14,7 +14,7 @@ from sklearn.model_selection import train_test_split
 import datetime
 import pickle
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 def train_cnn_rnn():
     x_, y_, x_test, y_test, vocabulary, vocabulary_inv, labels = data_helper.load_data()
