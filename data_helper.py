@@ -39,8 +39,10 @@ def sentence_to_word_list(a_review):
     tmp = a_review.split()
     words = []
     for word in tmp:
-        words.extend(clean_str(word).split())
-
+        if False:
+            words.extend(clean_str(word).split())
+        else:
+            words.extend(remove_punctuation(word).split())
     return words
 
 
@@ -48,21 +50,21 @@ def train_word2vec():
     # Import the built-in logging module and configure it so that Word2Vec
     # creates nice output messages
     sentences = get_sentences()
-    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s',\
-        level=logging.INFO)
+    logging.basicConfig(format='%(asctime)s : %(levelname)s : %(message)s', \
+                        level=logging.INFO)
 
     # Set values for various parameters
-    num_features = 300    # Word vector dimensionality
-    min_word_count = 1   # Minimum word count
-    num_workers = 9       # Number of threads to run in parallel
-    context = 5          # Context window size
-    downsampling = 1e-3   # Downsample setting for frequent words
+    num_features = 300  # Word vector dimensionality
+    min_word_count = 1  # Minimum word count
+    num_workers = 9  # Number of threads to run in parallel
+    context = 5  # Context window size
+    downsampling = 1e-3  # Downsample setting for frequent words
 
     # Initialize and train the model (this will take some time)
     print("Training model skip_gram...")
     model = word2vec.Word2Vec(sentences, workers=num_workers,
-                size=num_features, min_count=min_word_count,
-                window=context, sample=downsampling, sg=1)
+                              size=num_features, min_count=min_word_count,
+                              window=context, sample=downsampling, sg=1)
 
     # If you don't plan to train the model any further, calling
     # init_sims will make the model much more memory-efficient.
@@ -120,8 +122,54 @@ def remove_punctuation(s):
     return s.strip().lower()
 
 
+def load_fast_text(vocabulary):
+    print('start loading fasttext')
+    #model = gensim.models.KeyedVectors.load_word2vec_format('feature/facebookfasttext.vec')
+    with open('feature/fasttextModel', 'br') as f:
+        model = pickle.load(f)
+    print('finish loading fasttext')
+    embed_dict = model.vocab
+    word_embeddings = {}
+    num_oov = 0
+    for word in vocabulary:
+        if word in embed_dict:
+            vec = model.syn0[embed_dict[word].index]
+            word_embeddings[word] = (vec - min(vec)) / np.add(max(vec), -min(vec)) * 2 - 1
+
+        else:
+            num_oov += 1
+            word_embeddings[word] = np.random.uniform(-1, 1, 300)
+    print('Numb of oov is', num_oov)
+    return word_embeddings
+
+
+def load_glove(vocabulary):
+    print('start loading glove')
+    # model = gensim.models.KeyedVectors.load_word2vec_format('feature/glove.840B.300d.vec')
+    with open('feature/gloveModel', 'br') as f:
+        model = pickle.load(f)
+    print('finish loading glove')
+    embed_dict = model.vocab
+    word_embeddings = {}
+    num_oov = 0
+    for word in vocabulary:
+        if word in embed_dict:
+            vec = model.syn0[embed_dict[word].index]
+            word_embeddings[word] = (vec - min(vec)) / np.add(max(vec), -min(vec)) * 2 - 1
+
+        else:
+            num_oov += 1
+            word_embeddings[word] = np.random.uniform(-1, 1, 300)
+    print('Numb of oov is', num_oov)
+    return word_embeddings
+
+
 def load_word2vec(vocabulary):
-    model = gensim.models.KeyedVectors.load_word2vec_format('feature/GoogleNews-vectors-negative300.bin', binary=True)
+    print('start loading word2vec')
+    # model = gensim.models.KeyedVectors.load_word2vec_format('feature/GoogleNews-vectors-negative300.bin', binary=True)
+    with open('feature/word2vecModel', 'br') as f:
+        model = pickle.load(f)
+    print('finish loading word2vec')
     embed_dict = model.vocab
     word_embeddings = {}
     num_oov = 0
@@ -163,10 +211,10 @@ def load_my_word2vec(vocabulary):
 
 
 def load_senti_emb(vocabulary):
-    pretrained_word2vec_embbeding = load_word2vec(vocabulary)
+    #pretrained_word2vec_embbeding = load_word2vec(vocabulary)
 
     sent_emb_dict = {}
-    with open('feature/-round-431', 'r') as f:
+    with open('feature/SSWE/-round-220', 'r') as f:
         for line in f.readlines():
             line = line.split()
             word = line[0]
@@ -175,31 +223,24 @@ def load_senti_emb(vocabulary):
 
     word_embeddings = {}
     num_oov = 0
+    word_in_sswe = 0
     for word in vocabulary:
         if word in sent_emb_dict:
+            word_in_sswe += 1
             vec = sent_emb_dict[word]
             word_embeddings[word] = (vec - min(vec)) / np.add(max(vec), -min(vec)) * 2 - 1
-        elif word in pretrained_word2vec_embbeding:
-            word_embeddings[word] = pretrained_word2vec_embbeding[word]
+        # elif word in pretrained_word2vec_embbeding:
+        #     word_embeddings[word] = pretrained_word2vec_embbeding[word]
         else:
             num_oov += 1
             word_embeddings[word] = np.random.uniform(-1, 1, 300)
-    print('Numb of oov is', num_oov)
+    print('Word in SSWE is', word_in_sswe, 'Total num of oov is', num_oov)
     return word_embeddings
 
 
 def load_embeddings(vocabulary):
-    # Sentiment embedding
-    # emb_dict ={}
-    # with open('feature/senti_emb_20.txt', 'r') as f:
-    #     for line in f.readlines():
-    #         pass
 
-    # word2vec embedding
-    # if embedding == 'cbow':
-    word_embeddings = load_senti_emb(vocabulary)
-
-    # word2vec model
+    word_embeddings = load_glove(vocabulary)
 
     return word_embeddings
 
@@ -259,13 +300,13 @@ def load_imdb():
     x_raw = []
     y_raw = []
 
-    file = file_list[0] # neg
+    file = file_list[0]  # neg
     with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
         for line in rf.readlines():
             y_raw.append([1, 0])
             x_raw.append(sentence_to_word_list(line))
 
-    file = file_list[1] # pos
+    file = file_list[1]  # pos
     with open('data/' + file, 'r', encoding="ISO-8859-1") as rf:
         for line in rf.readlines():
             y_raw.append([0, 1])
@@ -315,7 +356,6 @@ def load_data():
     x_raw, y_raw = load_imdb()
     x_raw, sequence_length = pad_sentences(x_raw)
     vocabulary, vocabulary_inv = build_vocab(x_raw)
-
     x_train_dev, y_train_dev = load_imdb_train()
     x_train_dev, _ = pad_sentences(x_train_dev, given_pad_len=sequence_length)
     x = np.array([[vocabulary[word] for word in sentence] for sentence in x_train_dev])
@@ -332,4 +372,3 @@ def load_data():
 
 if __name__ == "__main__":
     train_word2vec()
-

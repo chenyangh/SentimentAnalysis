@@ -4,7 +4,7 @@
     "embedding_dim": 300,
     "evaluate_every": 100,
     "filter_sizes": "3,4,5",
-    "hidden_unit": 500,
+    "hidden_unit": 1000,
     "l2_reg_lambda": 0.0,
     "max_pool_size": 2,
     "non_static": false,

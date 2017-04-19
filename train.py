@@ -9,12 +9,13 @@ import data_helper
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from text_cnn_rnn import TextCNNRNN, TextRNN, TextCNN, TextCNNRNN2
+from text_cnn_rnn import TextCNNRNN, TextRNN, TextCNN, TextCNNRNN2, TextCNNBiRNN, TextBiRNN, TextCNNRNN2Bi, TextCNN2
 from sklearn.model_selection import train_test_split
 import datetime
 import pickle
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '2'
+os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+
 
 def train_cnn_rnn():
     x_, y_, x_test, y_test, vocabulary, vocabulary_inv, labels = data_helper.load_data()
@@ -47,7 +48,7 @@ def train_cnn_rnn():
         sess = tf.Session(config=session_conf)
         with sess.as_default():
 
-            cnn_rnn = TextCNN(
+            cnn_rnn = TextCNNBiRNN(
                 embedding_mat=embedding_mat,
                 sequence_length=x_train.shape[1],
                 num_classes=y_train.shape[1],
@@ -60,8 +61,8 @@ def train_cnn_rnn():
                 l2_reg_lambda=params['l2_reg_lambda'])
 
             global_step = tf.Variable(0, name='global_step', trainable=False)
-            optimizer = tf.train.AdamOptimizer(1e-3)
-            # optimizer = tf.train.RMSPropOptimizer(1e-3)
+            #optimizer = tf.train.MomentumOptimizer(0.1, 0.9)
+            optimizer = tf.train.AdamOptimizer()
             grads_and_vars = optimizer.compute_gradients(cnn_rnn.loss)
             train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
 
@@ -123,6 +124,7 @@ def train_cnn_rnn():
                 # print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
                 train_summary_writer.add_summary(summaries, step)
                 # print(accuracy)
+                return accuracy
 
 
             def dev_step(x_batch, y_batch):
@@ -146,28 +148,28 @@ def train_cnn_rnn():
             # Training starts here
             train_batches = data_helper.batch_iter(list(zip(x_train, y_train)), params['batch_size'],
                                                    params['num_epochs'])
-            best_accuracy, best_at_step = 0, 0
-
+            best_dev_accuracy, best_at_step = 0, 0
+            best_test_accuracy = 0
             # Train the model with x_train and y_train
             for train_batch in train_batches:
                 x_train_batch, y_train_batch = zip(*train_batch)
-                train_step(x_train_batch, y_train_batch)
+                train_acc = train_step(x_train_batch, y_train_batch)
                 current_step = tf.train.global_step(sess, global_step)
 
                 # Evaluate the model with x_dev and y_dev
                 if current_step % params['evaluate_every'] == 0:
 
-
-
+                    print("Training Accuracy:", train_acc, end=' ')
                     print("Evaluation:", end=' ')
-                    _ = dev_step(x_dev, y_dev)
+                    dev_acc, _ = dev_step(x_dev, y_dev)
                     print("Test:", end=' ')
-                    acc_tmp, pred__ = dev_step(x_test, y_test)
-                    with open('results/prediction' + str(current_step), 'bw') as f:
-                        pickle.dump(pred__, f)
-                    if acc_tmp > best_accuracy:
-                        best_accuracy = acc_tmp
-                    print('best accuracy is', best_accuracy)
+                    test_acc_tmp, pred__ = dev_step(x_test, y_test)
+                    # with open('results/prediction' + str(current_step), 'bw') as f:
+                    #     pickle.dump(pred__, f)
+                    if dev_acc > best_dev_accuracy:
+                        best_dev_accuracy = dev_acc
+                        best_test_accuracy = test_acc_tmp
+                    print('best dev accuracy is', best_dev_accuracy, 'the test is', best_test_accuracy)
             print('Training is complete, testing the best model on x_test and y_test')
 
             # Evaluate x_test and y_test
