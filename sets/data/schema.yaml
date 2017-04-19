@@ -1,5 +1,0 @@
-type: dict
-mapping:
-  directory:
-    type: str
-    default: ~/.dataset/sets
