@@ -14,12 +14,12 @@ from sklearn.model_selection import train_test_split
 import datetime
 import pickle
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '2'
 
 
 def train_cnn_rnn():
     x_, y_, x_test, y_test, vocabulary, vocabulary_inv, labels = data_helper.load_data()
-
+    #x_, y_, vocabulary, vocabulary_inv, labels = data_helper.load_data_book()
     training_config = 'training_config.json'
     params = json.loads(open(training_config).read())
 
@@ -33,6 +33,11 @@ def train_cnn_rnn():
     # Split the original dataset into train set and test set
 
     # Split the train set into train set and dev set
+    # IMDB style
+    # x_train, x_dev, y_train, y_dev = train_test_split(x_, y_, test_size=0.1)
+
+    # Book data style
+    #x_, x_test, y_, y_test = train_test_split(x_, y_, test_size=0.1)
     x_train, x_dev, y_train, y_dev = train_test_split(x_, y_, test_size=0.1)
 
     # Create a directory, everything related to the training will be saved in this directory
@@ -48,7 +53,7 @@ def train_cnn_rnn():
         sess = tf.Session(config=session_conf)
         with sess.as_default():
 
-            cnn_rnn = TextCNNBiRNN(
+            cnn_rnn = TextCNNRNN(
                 embedding_mat=embedding_mat,
                 sequence_length=x_train.shape[1],
                 num_classes=y_train.shape[1],

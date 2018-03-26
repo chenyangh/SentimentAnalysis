@@ -540,7 +540,6 @@ class TextCNNBiRNN(object):
             self.num_correct = tf.reduce_sum(tf.cast(correct, 'float'))
 
 
-
 class TextBiRNN(object):
     def __init__(self, embedding_mat, non_static, hidden_unit, sequence_length, max_pool_size,
                  num_classes, embedding_size, filter_sizes, num_filters, l2_reg_lambda=0.0):

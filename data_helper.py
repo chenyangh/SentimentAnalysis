@@ -36,14 +36,10 @@ def split_sentences(review, __remove_stopwords=False):
 def sentence_to_word_list(a_review):
     # Use regular expressions to do a find-and-replace
 
-    tmp = a_review.split()
-    words = []
-    for word in tmp:
-        if False:
-            words.extend(clean_str(word).split())
-        else:
-            words.extend(remove_punctuation(word).split())
-    return words
+    if True:
+        return clean_str(a_review).split()
+    else:
+        return remove_punctuation(a_review).split()
 
 
 def train_word2vec():
@@ -240,7 +236,7 @@ def load_senti_emb(vocabulary):
 
 def load_embeddings(vocabulary):
 
-    word_embeddings = load_glove(vocabulary)
+    word_embeddings = load_word2vec(vocabulary)
 
     return word_embeddings
 
@@ -369,6 +365,34 @@ def load_data():
     labels = ['negative', 'positive']
     return x, y, x_test, y_test, vocabulary, vocabulary_inv, labels
 
+def load_book():
+    file_list_test = ['book_10k.neg', 'book_10k.pos']
+    x_raw = []
+    y_raw = []
+
+    file = file_list_test[0]  # neg
+    with open('data/' + file, 'r') as rf:
+        for line in rf.readlines():
+            y_raw.append([1, 0])
+            x_raw.append(sentence_to_word_list(line))
+
+    file = file_list_test[1]  # pos
+    with open('data/' + file, 'r') as rf:
+        for line in rf.readlines():
+            y_raw.append([0, 1])
+            x_raw.append(sentence_to_word_list(line))
+    return x_raw, y_raw
+
+
+def load_data_book():
+
+    x_raw, y_raw = load_book()
+    x_raw, sequence_length = pad_sentences(x_raw)
+    vocabulary, vocabulary_inv = build_vocab(x_raw)
+    x = np.array([[vocabulary[word] for word in sentence] for sentence in x_raw])
+    y = np.array(y_raw)
+    labels = ['negative', 'positive']
+    return x, y, vocabulary, vocabulary_inv, labels
 
 if __name__ == "__main__":
     train_word2vec()
